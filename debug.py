@@ -1110,13 +1110,13 @@ def init_debug_module(
     def shorten(string: str, limit: int = termwidth) -> str:
         if not string:
             return string
-        if limit < 4:
-            raise ValueError(f"{limit = } but must be >= 4 because the shortest possible string is 'x..x'.")
         if not isinstance(string, str):
             string = str(string)
         length = len(string)
         if length <= limit:
             return string
+        if limit < 3:
+            raise ValueError(f"{limit = } but must be >= 3 because the shortest possible string is 'x..'")
         small_half_of_limit = limit // 2
         big_half_of_limit = limit - small_half_of_limit
         if "\033[" in string:
@@ -1133,7 +1133,7 @@ def init_debug_module(
                     return f"{color_a.group()}{shorten(no_color, limit)}{color_b.group()}"
             return shorten(no_color, limit)
 
-        if limit == 4:
+        if 3 <= limit <= 4:
             placeholder = ".."
             placeholder_length = 2
         else:
@@ -1141,6 +1141,8 @@ def init_debug_module(
             placeholder_length = 3
         small_half_of_placeholder_length = placeholder_length // 2
         big_half_of_placeholder_length = placeholder_length - small_half_of_placeholder_length
+        if limit == 3:
+            return string[0] + placeholder
         if limit % 2 == 1:
             left_cutoff_index: int = big_half_of_limit - big_half_of_placeholder_length
             right_cutoff_rindex: int = small_half_of_limit - small_half_of_placeholder_length

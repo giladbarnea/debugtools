@@ -8,6 +8,9 @@ debug = init_debug_module()
 @pytest.mark.parametrize(
     "string, limit, expected, placeholder_len, char_count",
     [
+        # No error even if limit is < 4 because the string is <= limit.
+        ("12", 2, "12", 0, 2),
+        ("12345678", 3, "1..", 2, 1),
         ("12345678", 4, "1..8", 2, 2),
         ("12345678", 5, "1...8", 3, 2),
         ("12345678", 6, "12...8", 3, 3),
@@ -36,8 +39,8 @@ def test_shorten_single_line_valid(string, limit, expected, placeholder_len, cha
 
 
 def test_shorten_single_line_error():
-    with pytest.raises(ValueError):  # Assuming ValueError is the correct error type
-        debug.shorten("12345678", 3)
+    with pytest.raises(ValueError):
+        debug.shorten("12345678", 2)
 
 
 @pytest.mark.parametrize(
@@ -85,5 +88,5 @@ def test_shorten_multiline_large_limit_returns_as_is(string, limit, expected, pl
 
 
 def test_shorten_multiline_error():
-    with pytest.raises(ValueError):  # Assuming ValueError is the correct error type
-        debug.shorten("123\n5678", 3)
+    with pytest.raises(ValueError):
+        debug.shorten("123\n5678", 2)
