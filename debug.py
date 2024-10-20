@@ -73,6 +73,7 @@ def init_debug_module(
     if envbool("DEBUGFILE_LOADED"):
         _print("Not loading debug.py because DEBUGFILE_LOADED", file=__import__("sys").stderr)
         return
+    print("Loading debug.py")
     import builtins
     from copy import deepcopy
 
@@ -1148,6 +1149,12 @@ def init_debug_module(
             right_cutoff_rindex: int = small_half_of_limit - big_half_of_placeholder_length
         start = string[:left_cutoff_index]
         end = string[-right_cutoff_rindex:]
+        is_multiline = "\n" in string
+        placeholder_should_start_with_linebreak = is_multiline and not start.endswith("\n")
+        placeholder_should_end_with_linebreak = is_multiline and not end.startswith("\n")
+        placeholder = f"\n{placeholder}" if placeholder_should_start_with_linebreak else placeholder
+        placeholder = f"{placeholder}\n" if placeholder_should_end_with_linebreak else placeholder
+
         return f"{start}{placeholder}{end}"
 
     @builtin

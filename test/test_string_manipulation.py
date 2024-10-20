@@ -1,177 +1,89 @@
 import pytest
 
+from debug import init_debug_module
 
-def test_shorten():
-    from debug import init_debug_module
+debug = init_debug_module()
 
-    debug = init_debug_module()
-    # Test case 1
-    string = "12345678"
-    limit = 3
-    with pytest.raises(ValueError):
-        debug.shorten(string, limit)
 
-    # Test case 2
-    string = "12345678"
-    limit = 4
-    expected = "1..8"
-    expected_placeholder = ".."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 2
+@pytest.mark.parametrize(
+    "string, limit, expected, placeholder_len, char_count",
+    [
+        ("12345678", 4, "1..8", 2, 2),
+        ("12345678", 5, "1...8", 3, 2),
+        ("12345678", 6, "12...8", 3, 3),
+        ("12345678", 7, "12...78", 3, 4),
+        ("12345678", 8, "12345678", 0, 8),
+        ("1234567890", 7, "12...90", 3, 4),
+        ("1234567890", 8, "123...90", 3, 5),
+        ("1234567890", 9, "123...890", 3, 6),
+        ("12345678901", 10, "1234...901", 3, 7),
+        ("123456789012", 10, "1234...012", 3, 7),
+        ("123456789012", 11, "1234...9012", 3, 8),
+    ],
+)
+def test_shorten_single_line_valid(string, limit, expected, placeholder_len, char_count):
     actual = debug.shorten(string, limit)
     assert actual == expected
     assert len(actual) == limit
-    assert actual.count(".") == 2
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
 
-    # Test case 3
-    string = "12345678"
-    limit = 5
-    expected = "1...8"  # 1..│.8
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 2
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    placeholder = "." * placeholder_len
+    assert actual.count(".") == placeholder_len
 
-    # Test case 4
-    string = "12345678"
-    limit = 6
-    expected = "12...8"  # 12.│..8
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 3
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    actual_chars = actual.replace(placeholder, "", 1)
+    expected_chars = expected.replace(placeholder, "", 1)
+    assert actual_chars == expected_chars
+    assert len(actual_chars) == char_count
 
-    # Test case 5
-    string = "12345678"
-    limit = 7
-    expected = "12...78"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 4
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
 
-    # Test case 6
-    string = "12345678"
-    limit = 8
-    expected = "12345678"
-    expected_placeholder = ""
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 8
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 0
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+def test_shorten_single_line_error():
+    with pytest.raises(ValueError):  # Assuming ValueError is the correct error type
+        debug.shorten("12345678", 3)
 
-    # Test case 7
-    string = "1234567890"
-    limit = 7
-    expected = "12...90"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 4
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
 
-    # Test case 8
-    string = "1234567890"
-    limit = 8
-    expected = "123...90"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 5
-    actual = debug.shorten(string, limit)
+@pytest.mark.parametrize(
+    "string, limit, expected, placeholder_len, char_count",
+    [
+        ("123\n5678", 4, "1\n..\n8", 2, 2),
+        ("123\n5678", 5, "1\n...\n8", 3, 2),
+        ("123\n5678", 6, "12\n...\n8", 3, 3),
+        ("123\n5678", 7, "12\n...\n78", 3, 4),
+        ("123\n567890", 7, "12\n...\n90", 3, 4),
+        ("123\n567890", 8, "123\n...\n90", 3, 5),
+        ("123\n567890", 9, "123\n...\n890", 3, 6),
+        # Preserve newlines in resulting string
+        ("123\n5678901", 10, "123\n4\n...\n901", 3, 7),
+        ("123\n56789012", 10, "123\n4\n...\n012", 3, 7),
+        ("123\n56789012", 11, "123\n4\n...\n9012", 3, 8),
+    ],
+)
+def test_shorten_multiline_valid(string, limit, expected, placeholder_len, char_count):
+    actual: str = debug.shorten(string, limit)
     assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    assert len(actual) == limit + 2  # +2 for the two newlines
 
-    # Test case 9
-    string = "1234567890"
-    limit = 9
-    expected = "123...890"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 6
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    raw_placeholder = "." * placeholder_len
+    placeholder = "\n" + raw_placeholder + "\n"
+    assert placeholder in actual
 
-    # Test case 10
-    string = "12345678901"
-    limit = 10
-    expected = "1234...901"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 7
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    actual_chars = actual.replace(raw_placeholder, "", 1)
+    expected_chars = expected.replace(raw_placeholder, "", 1)
+    assert actual_chars == expected_chars
+    assert len(actual_chars) == char_count + 2  # +2 for the two newlines
 
-    # Test case 11
-    string = "123456789012"
-    limit = 10
-    expected = "1234...012"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 7
-    actual = debug.shorten(string, limit)
-    assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
 
-    # Test case 12
-    string = "123456789012"
-    limit = 11
-    expected = "1234...9012"
-    expected_placeholder = "..."
-    expected_chars_no_placeholder = expected.replace(expected_placeholder, "", 1)
-    expected_chars_no_placeholder_count = 8
-    actual = debug.shorten(string, limit)
+@pytest.mark.parametrize(
+    "string, limit, expected, placeholder_len, char_count",
+    [
+        ("123\n5678", 8, "123\n5678", 0, 8),
+    ],
+)
+def test_shorten_multiline_large_limit_returns_as_is(string, limit, expected, placeholder_len, char_count):
+    actual: str = debug.shorten(string, limit)
     assert actual == expected
-    assert len(actual) == limit
-    assert actual.count(".") == 3
-    actual_chars_no_placeholder = actual.replace(expected_placeholder, "", 1)
-    assert actual_chars_no_placeholder == expected_chars_no_placeholder
-    assert len(actual_chars_no_placeholder) == expected_chars_no_placeholder_count
+    assert "." not in actual
+    assert len(actual) == char_count
+
+
+def test_shorten_multiline_error():
+    with pytest.raises(ValueError):  # Assuming ValueError is the correct error type
+        debug.shorten("123\n5678", 3)
