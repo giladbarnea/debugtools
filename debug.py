@@ -390,7 +390,7 @@ def init_debug_module(
             while i < matches_len:
                 match = matches[i]
                 group = match.group().strip()
-                group = re.sub("\s*=.*", "", group)
+                group = re.sub(r"\s*=.*", "", group)
                 if VarInfo._unclosed_str(group):
                     # bug? always i+=2?
                     next_group = matches[i + 1].group()
@@ -455,7 +455,7 @@ def init_debug_module(
                 _match = _matches[i]
                 _group = _match.group().strip()
                 # 'bar =' -> 'bar'
-                _group = re.sub("\s*=.*", "", _group)
+                _group = re.sub(r"\s*=.*", "", _group)
                 if _unclosed(_group):
                     # bug? always i+=2?
                     _next_group = _matches[i + 1].group()
@@ -1141,23 +1141,19 @@ def init_debug_module(
             placeholder_length = 3
         small_half_of_placeholder_length = placeholder_length // 2
         big_half_of_placeholder_length = placeholder_length - small_half_of_placeholder_length
-        if limit == 3:
-            return string[0] + placeholder
+
+        # Odd limits make symmetric strings, because the separator is odd too. Big–big cancel out, as do small–small.
         if limit % 2 == 1:
             left_cutoff_index: int = big_half_of_limit - big_half_of_placeholder_length
-            right_cutoff_rindex: int = small_half_of_limit - small_half_of_placeholder_length
+            right_cutoff_index: int = length - (small_half_of_limit - small_half_of_placeholder_length)
         else:
+            # Even limits make asymmetric strings, so we give the extra char to the left half.
             left_cutoff_index: int = big_half_of_limit - small_half_of_placeholder_length
-            right_cutoff_rindex: int = small_half_of_limit - big_half_of_placeholder_length
-        start = string[:left_cutoff_index]
-        end = string[-right_cutoff_rindex:]
-        is_multiline = "\n" in string
-        placeholder_should_start_with_linebreak = is_multiline and not start.endswith("\n")
-        placeholder_should_end_with_linebreak = is_multiline and not end.startswith("\n")
-        placeholder = f"\n{placeholder}" if placeholder_should_start_with_linebreak else placeholder
-        placeholder = f"{placeholder}\n" if placeholder_should_end_with_linebreak else placeholder
+            right_cutoff_index: int = length - (small_half_of_limit - big_half_of_placeholder_length)
 
-        return f"{start}{placeholder}{end}"
+        start = string[:left_cutoff_index]
+        end = string[right_cutoff_index:]
+        return f"{start}{placeholder}{end}".replace("\n", " ")
 
     @builtin
     def pretty_inst(obj: Obj) -> str | Obj:

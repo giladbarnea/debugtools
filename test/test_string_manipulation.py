@@ -1,8 +1,14 @@
 import pytest
+from parametrized import parametrized
 
 from debug import init_debug_module
 
 debug = init_debug_module()
+
+
+def test_shorten_single_line_error():
+    with pytest.raises(ValueError, match="must be >= 3"):
+        debug.shorten("12345678", 2)
 
 
 @pytest.mark.parametrize(
@@ -38,40 +44,42 @@ def test_shorten_single_line_valid(string, limit, expected, placeholder_len, cha
     assert len(actual_chars) == char_count
 
 
-def test_shorten_single_line_error():
-    with pytest.raises(ValueError):
-        debug.shorten("12345678", 2)
-
-
 @pytest.mark.parametrize(
     "string, limit, expected, placeholder_len, char_count",
     [
-        ("123\n5678", 4, "1\n..\n8", 2, 2),
-        ("123\n5678", 5, "1\n...\n8", 3, 2),
-        ("123\n5678", 6, "12\n...\n8", 3, 3),
-        ("123\n5678", 7, "12\n...\n78", 3, 4),
-        ("123\n567890", 7, "12\n...\n90", 3, 4),
-        ("123\n567890", 8, "123\n...\n90", 3, 5),
-        ("123\n567890", 9, "123\n...\n890", 3, 6),
-        # Preserve newlines in resulting string
-        ("123\n5678901", 10, "123\n4\n...\n901", 3, 7),
-        ("123\n56789012", 10, "123\n4\n...\n012", 3, 7),
-        ("123\n56789012", 11, "123\n4\n...\n9012", 3, 8),
+        ("12", 5, "12", 0, 2),
     ],
 )
-def test_shorten_multiline_valid(string, limit, expected, placeholder_len, char_count):
+def test_shorten_single_line_large_limit_returns_as_is(string, limit, expected, placeholder_len, char_count):
     actual: str = debug.shorten(string, limit)
     assert actual == expected
-    assert len(actual) == limit + 2  # +2 for the two newlines
+    assert "." not in actual
+    assert len(actual) == char_count
 
-    raw_placeholder = "." * placeholder_len
-    placeholder = "\n" + raw_placeholder + "\n"
+
+cases = [
+    dict(string="\n2345678", limit=3, expected=" .."),
+    dict(string="123\n5678", limit=5, expected="1...8"),
+    dict(string="1\n345678", limit=5, expected="1...8"),
+    dict(string="1234567\n", limit=5, expected="1... "),
+]
+
+strings, limits, expecteds = list(zip(*[case.values() for case in cases]))
+
+
+@parametrized.zip
+def test_shorten_multiline_valid(string=strings, limit=limits, expected=expecteds):
+    actual: str = debug.shorten(string, limit)
+    assert actual == expected
+    assert len(actual) == limit
+    assert "\n" not in actual
+
+    placeholder = "." * expected.count(".")
     assert placeholder in actual
 
-    actual_chars = actual.replace(raw_placeholder, "", 1)
-    expected_chars = expected.replace(raw_placeholder, "", 1)
+    actual_chars = actual.replace(placeholder, "", 1)
+    expected_chars = expected.replace(placeholder, "", 1)
     assert actual_chars == expected_chars
-    assert len(actual_chars) == char_count + 2  # +2 for the two newlines
 
 
 @pytest.mark.parametrize(
@@ -88,5 +96,5 @@ def test_shorten_multiline_large_limit_returns_as_is(string, limit, expected, pl
 
 
 def test_shorten_multiline_error():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must be >= 3"):
         debug.shorten("123\n5678", 2)
